@@ -37,7 +37,8 @@ class ReservationModel {
 			ON (reservation.routeId = route.id)
 			LEFT JOIN stop
 			ON (route.id = stop.routeId)
-			WHERE reservation.userId = ?;
+			WHERE reservation.userId = ?
+			GROUP BY reservation.id;
 		`, [uid])
 
 		const reservations = result.map(reservation => {
