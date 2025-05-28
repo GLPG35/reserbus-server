@@ -1,5 +1,6 @@
-import { CreateReservation, DBReservation, UpdateReservation } from '../types'
+import { ConfirmReservation, CreateReservation, DBPaymentMethodId, DBReservation, RouteId, UpdateReservation } from '../types'
 import { connection } from './database/db'
+import UserModel from './user'
 
 class ReservationModel {
 	private static createRoute = async (origin: string, destination: string) => {
@@ -24,7 +25,9 @@ class ReservationModel {
 		})
 	}
 
-	static getReservations = async (uid: string) => {
+	static getReservations = async (uid: string, all = false) => {
+		const role = await UserModel.getRole(uid)
+		
 		const [result] = await connection.execute<DBReservation[]>(`
 			SELECT reservation.id, reservation.routeId,
 			reservation.vehicleId, reservation.vehicleType,
@@ -37,8 +40,9 @@ class ReservationModel {
 			ON (reservation.routeId = route.id)
 			LEFT JOIN stop
 			ON (route.id = stop.routeId)
-			WHERE reservation.userId = ?
-			GROUP BY reservation.id;
+			${role === 'admin' && all ? '' : 'WHERE reservation.userId = ?'}
+			GROUP BY reservation.id
+			ORDER BY reservation.createdAt DESC
 		`, [uid])
 
 		const reservations = result.map(reservation => {
@@ -82,7 +86,8 @@ class ReservationModel {
 			ON (reservation.routeId = route.id)
 			LEFT JOIN stop
 			ON (route.id = stop.routeId)
-			WHERE reservation.id = ?;
+			WHERE reservation.id = ?
+			GROUP BY reservation.id
 		`, [id])
 
 		if (result.length < 1) throw new Error('Reserva no encontrada')
@@ -102,6 +107,40 @@ class ReservationModel {
 				WHERE id = ?
 			`, [id])
 		})
+	}
+
+	private static getRouteId = async (id: string) => {
+		const [result] = await connection.execute<RouteId[]>(`
+			SELECT routeId FROM reservation
+			WHERE id = ?
+		`, [id])
+
+		if (result.length < 1) throw new Error('Reserva no encontrada')
+
+		return result[0].routeId
+	}
+
+	private static confirmRoute = async (rid: string, duration: number) => {
+		return connection.execute(`
+			UPDATE route
+			SET duration = ?
+			WHERE id = ?
+		`, [duration, rid])
+	}
+
+	static confirmReservation = async (uid: string, id: string, data: ConfirmReservation) => {
+		const { duration, vehicleId, amount } = data 
+
+		await UserModel.validateAdmin(uid)
+
+		const rid = await this.getRouteId(id)
+
+		await this.confirmRoute(rid, duration)
+
+		return connection.execute(`
+			UPDATE reservation
+			SET vehicleId = ?, amount = ?
+		`, [vehicleId, amount])
 	}
 
 	private static updateRoute = async (routeId: string, origin?: string, destination?: string) => {
@@ -143,6 +182,43 @@ class ReservationModel {
 	static deleteReservation = async (id: string) => {
 		return connection.execute(`
 			DELETE FROM reservation
+			WHERE id = ?
+		`, [id])
+	}
+
+	private static getMethodId = async (method: 'credit'|'debit'|'transfer') => {
+		const [result] = await connection.execute<DBPaymentMethodId[]>(`
+			SELECT id FROM paymentmethod
+			WHERE name = ?
+		`, [method])
+
+		if (result.length < 1) throw new Error('Método de pago no encontrado')
+
+		const [{ id: methodId }] = result
+
+		return methodId
+	}
+
+	private static createPayment = async (rid: string, method: 'credit'|'debit'|'transfer') => {
+		const id = Bun.randomUUIDv7()
+
+		const methodId = await this.getMethodId(method)
+		const { amount } = await this.getReservation(id)
+		
+		await connection.execute(`
+			INSERT INTO payment (id, reservationId, methodId, amount)
+			VALUES (?, ?, ?, ?)
+		`, [id, rid, methodId, amount])
+
+		return id
+	}
+
+	static makePayment = async (id: string) => {
+		// const pid = await this.createPayment(id, 'credit')
+
+		return connection.execute(`
+			UPDATE reservation
+			SET status = 'confirmada'
 			WHERE id = ?
 		`, [id])
 	}

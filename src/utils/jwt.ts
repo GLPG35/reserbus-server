@@ -9,7 +9,7 @@ export const getJWTUser = (payload: JWTPayload) => {
 }
 
 export const createToken = async (user: User) => {
-	const { id, name, lastname, email, ci } = user
+	const { id, name, lastname, email, ci, role } = user
 
 	const days = 7
 	const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * days
@@ -20,7 +20,8 @@ export const createToken = async (user: User) => {
 		lastname,
 		email,
 		ci,
-		exp
+		exp,
+		role
 	}
 
 	const secret = process.env.SECRET as string
@@ -32,6 +33,7 @@ export const createToken = async (user: User) => {
 		lastname,
 		email,
 		ci,
+		role,
 		token
 	}
 }

@@ -6,7 +6,8 @@ interface DBUser extends RowDataPacket {
 	lastname: string,
 	email: string,
 	ci: number,
-	password: string
+	password: string,
+	role: 'user'|'admin'
 }
 
 interface DBReservation extends RowDataPacket {
@@ -24,12 +25,33 @@ interface DBReservation extends RowDataPacket {
 	stops: null|string
 }
 
+interface DBVehicle extends RowDataPacket {
+	id: string,
+	type: 'bus'|'microbus'|'minibus',
+	capacity: number,
+	availableTime: string,
+	createdAt: string
+}
+
+interface DBPaymentMethod extends RowDataPacket {
+	id: string,
+	reservationId: string,
+	methodId: string,
+	amount: number,
+	createdAt: string
+}
+
+interface DBPaymentMethodId extends RowDataPacket {
+	id: string
+}
+
 interface User {
 	id: string,
 	name: string,
 	lastname: string,
 	email: string,
-	ci: number
+	ci: number,
+	role: 'user'|'admin'
 }
 
 interface UserWithToken extends User {
@@ -42,7 +64,8 @@ interface CreateUser {
 	email: string,
 	ci: number,
 	password: string,
-	tel: string
+	tel: string,
+	role?: 'user'|'admin'
 }
 
 interface CreateReservation {
@@ -53,6 +76,12 @@ interface CreateReservation {
 	busType: string
 }
 
+interface ConfirmReservation {
+	duration: number,
+	vehicleId: string,
+	amount: number
+}
+
 interface UpdateReservation {
 	origin?: string,
 	destination?: string,
@@ -61,6 +90,16 @@ interface UpdateReservation {
 	busType?: string
 }
 
+interface RouteId extends RowDataPacket {
+	routeId: string
+}
+
 interface TripUser extends CreateReservation {
 	user: CreateUser
+}
+
+interface AddVehicle {
+	type: 'bus'|'minibus'|'microbus',
+	capacity: string,
+	availableTime: string
 }

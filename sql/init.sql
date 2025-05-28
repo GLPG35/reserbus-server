@@ -1,3 +1,4 @@
+create database reserbus if not exists;
 use reserbus;
 
 create table user (
@@ -7,6 +8,7 @@ create table user (
   lastname varchar(32) not null,
   email varchar(64) not null unique,
   password binary(60) not null,
+  role enum('user', 'admin') default 'user',
   createdAt timestamp default current_timestamp,
   disabled bool default false,
   primary key (id)
@@ -33,7 +35,7 @@ create table route (
   id char(36) not null,
   origin varchar(32) not null,
   destination varchar(32) not null,
-  duration time,
+  duration time,  
   primary key (id)
 );
 
@@ -79,4 +81,34 @@ create table payment (
   primary key (id),
   foreign key (reservationId) references reservation(id),
   foreign key (methodId) references paymentmethod(id)
+);
+
+insert into user (id, ci, name, lastname, email, password, role)
+values (
+	'019700a0-14ca-7000-b37d-41186488164c',
+  55610793,
+  'Administrador',
+  'Ingeniería',
+  'admin@gmail.com',
+  '$2b$10$iQJPHpLEmqjWfczhu8R9KOV2SINL/4s0W9AJ4OiBOEhLtAqWnZKA2',
+  'admin'
+);
+
+insert into vehicle (id, type, capacity, availableTime)
+values
+(
+  '019718a2-e5d7-7000-a127-8a64c816dcf9',
+  'bus',
+  36,
+  '08:00:00'
+), (
+	'019718a3-66fa-7000-b44b-4defd7c1b986',
+  'minibus',
+  25,
+  '17:00:00'
+), (
+	'019718a4-67ce-7000-b683-ba09322bc74b',
+  'microbus',
+  18,
+  '13:00:00'
 );

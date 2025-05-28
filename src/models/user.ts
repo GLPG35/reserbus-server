@@ -17,7 +17,7 @@ class UserModel {
 	
 	static getUser = async (id: string) => {
 		const [result] = await connection.execute(`
-			SELECT id, name, lastname, email, ci
+			SELECT id, name, lastname, email, ci, role
 			FROM user
 			WHERE id = ?
 		`, [id])
@@ -35,9 +35,29 @@ class UserModel {
 		return result.length > 0
 	}
 
+	static getRole = async (id: string) => {
+		const [result] = await connection.execute<DBUser[]>(`
+			SELECT role
+			FROM user
+			WHERE id = ?
+		`, [id])
+
+		if (result.length < 1) throw new Error('Usuario no encontrado')
+
+		return result[0].role
+	}
+
+	static validateAdmin = async (id: string) => {
+		const role = await this.getRole(id)
+
+		if (role !== 'admin') throw new Error('Usuario sin permisos suficientes')
+
+		return
+	}
+
 	static authUser = async (email: string, password: string) => {
 		const [[result]] = await connection.execute<DBUser[]>(`
-			SELECT id, name, lastname, email, ci, cast(password as CHAR) as password
+			SELECT id, name, lastname, email, ci, cast(password as CHAR) as password, role
 			FROM user
 			WHERE email = ?
 		`, [email])
@@ -54,7 +74,7 @@ class UserModel {
 	}
 
 	static createUser = async (user: CreateUser) => {
-		const { name, lastname, ci, email, password, tel } = user
+		const { name, lastname, ci, email, password, tel, role } = user
 		const id = Bun.randomUUIDv7()
 
 		const userExists = await this.userExists(ci)
@@ -64,9 +84,9 @@ class UserModel {
 		const passwordHash = await Bun.password.hash(password, 'bcrypt')
 
 		await connection.execute(`
-			INSERT INTO user (id, ci, name, lastname, email, password)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`, [id, ci, name, lastname, email, passwordHash])
+			INSERT INTO user (id, ci, name, lastname, email, password${role ? ', role' : ''})
+			VALUES (?, ?, ?, ?, ?, ?${role ? ', ?' : ''})
+		`, role ? [id, ci, name, lastname, email, passwordHash, role] : [id, ci, name, lastname, email, passwordHash])
 
 		await connection.execute(`
 			INSERT INTO tel (id, number)
@@ -78,7 +98,8 @@ class UserModel {
 			ci,
 			name,
 			lastname,
-			email
+			email,
+			role: role ?? 'user'
 		}
 
 		return createToken(newUser)
