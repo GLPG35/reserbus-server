@@ -12,11 +12,13 @@ Lista de requerimientos
 
 Una vez instalados los requerimientos procedermos a abrir nuestra terminal de preferencia y pegar los siguientes comandos:
 
-> git clone https://github.com/GLPG35/reserbus-server
-
-> cd reserbus-server
-
-> bun install
+```
+git clone https://github.com/GLPG35/reserbus-server
+```
+```
+cd reserbus-server
+bun install
+```
 
 Con eso quedarían todos los paquetes instalados y listos para funcionar.
 
@@ -24,4 +26,6 @@ Antes de poder iniciar el servidor, debemos inicializar la base de datos. Para e
 
 Una vez hecho eso, podremos ejecutar nuestro servidor con normalidad con el comando:
 
-> bun src/index.ts
+```
+bun src/index.ts
+```
